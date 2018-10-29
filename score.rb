@@ -1,67 +1,6 @@
-#きっかけはpointの１点追加。
-#直後point中left、rightの状態を観察しmode変更とgameの１点追加。
-#同じくgame中のleft、rightの状態を観察しmode変更とsetの１点追加。
-#modeとは上のカテゴリに1点追加する条件、表示の仕方
-
-class Table
-  def initialize(*row)
-    @table = row #[[a, b, c], [d, e, f], [g, h, i]]
-  end
-  
-  def << row
-    @table << row #<<[j, k, l] => [[a, b, c], [d, e, f], [g, h, i],[j, k, l]]
-  end
-  
-  def get(pointer)
-    current = pointer.current
-    @table[current[0]][current[1]]
-  end
-  
-  def inspect
-    p @table
-  end
-end  
-
-class Player
-  attr_accessor :winner, :loser
-  def initialize winner_player
-    @winner = winner_player
-    @loser = (@winner == :left) ? :right : :left
-  end
-  
-  def other
-    @loser
-  end
-  
-  def other_level!
-    
-  end
-  
-  def upper!
-    case @current_score
-      when :points
-      @current_score = :games
-      when :games
-      @current_score = :sets
-    end
-    
-  end
-  
-  def lower!
-    @pointer[0] += 1
-  end
-  
-  def left!
-    @pointer[1] -= 1
-  end
-  
-  def right!
-    @pointer[1] +=1
-  end 
-end
-
 class Digit
-  attr_accessor :digit
+  attr_reader :digit
+  
   def initialize
     reset! 
   end
@@ -74,183 +13,248 @@ class Digit
     @digit = 0
   end
   
-  def inspect
-    @digit
+  def deuce_again!
+    @digit = 3
   end
 end
 
-class Score
-  attr_accessor :left, :right, :mode, :over
-  def initialize mode
+
+class Element
+  def initialize
     @left = Digit.new
     @right = Digit.new
-    @mode = mode
-    @over = false
   end
   
-  def increment player
-    case player
-      when :left
-      @left.increment
-      when :right
-      @right.increment
-    end
-  end
-  
-  def evaluate player
-    @mode.evaluate player
-  end
-  
-  def over?
-    @over
+  def get_point(side)
+    @side = side
+    winner_set
+    increment
+    evaluate
   end
   
   def display
-    @mode.display
+    rtn = []
+    rtn << @display[@mode].call
+    rtn << @super.display if @super
+    rtn.flatten
   end
   
-  def mode_change mode
-    @mode = mode
+  def test_display
+    rtn = []
+    rtn << left
+    rtn << right 
+    @super.test_display.each{|aug|rtn << aug} if @super
+    rtn
+  end   
+  
+  private
+  
+  def left
+    @left.digit
   end
-end
+  
+  def right
+    @right.digit
+  end
+  
+  def winner
+    @winner.digit
+  end
+  
+  def loser
+    @loser.digit
+  end
+  
+  def reset
+    @left.reset!
+    @right.reset!
+  end
+  
+  def winner_set
+    case @side
+      when :left
+      @winner = @left
+      @loser = @right
+      when :right
+      @winner = @right
+      @loser = @left
+    end
+  end
+  
+  def increment
+    @winner.increment!
+  end
+  
+  def over
+    @super.get_point @side
+    reset
+  end
+  
+  def evaluate
+    @evaluate[@mode].call
+  end
+end  
 
-class Point
-  NORMAL = Object.new
-  DEUCE = Object.new
-  class << NORMAL
-    def evaluate main
-      winner_point = main.points.send(main.player.winner)
-      if winner_point.digit == 4
-        winner_point.reset!
-        winner_point.reset!
-        winner_point.over = true
-      elsif winner_point.digit == 3 && @points.send(player.other).digit == 3
-        mode = Point::DEUCE
-      end
-    end
-    
-    def display
-      
-    end
-  end  
-  
-  class << DEUCE
-    def evaluate
-      
-    end
-    
-    def display
-      
-    end    
-  end
-  #  
-  #  def Normal.display
-  #    
-  #  end
-  #  
-  #  Deuce = Object.new
-  #  def Deuce.evaluate
-  #    
-  #  end
-  #  
-  #  def Deuce.display
-  #    
-  #  end
-  #  
-  #  TieBrake = Object.new
-  #  def TieBrake.valuate
-  #    
-  #  end
-  #  
-  #  def TieBrake.display
-  #    
-  #  end
-  #
-  #  def initialize 
-  #    super Normal
-  #  end
-end
 
-class Game
-  NORMAL = lambda do
-    
-  end
-end
-
-class Main
-  attr_reader :sets, :games, :points, :player
-  def initialize
-    @sets = Score.new nil
-    @games = Score.new Game::NORMAL
-    @points = Score.new Point::NORMAL
-  end
+class Point < Element
+  attr_writer :mode
   
-  def add_score winner
-    @player = Player.new winner
-    increment_points @player
-    @points.evaluate self
-    if @points.over?
-      increment_games @player
-      @games.evaluate self
-      if @games.over?
-        increment_sets @player
-      end
-    end
-    display
-  end
-  
-  def inspect
-    p @points
-  end
-  
-  def get
-    inspect
+  def initialize  
+    super()
+    evaluate_set
+    display_set
+    @super = Game.new self
+    @mode = :normal
   end
   
   private
   
-  def increment_points player
-    @points.send(player.winner).increment!
+  def deuce_again
+    @left.deuce_again!
+    @right.deuce_again!
   end
   
-  #  def increment(pointer)
-  #    digit = @score.get(pointer)
-  #    digit.increment!
-  #    if digit.max?
-  #      @score.get(pointer).reset!
-  #      @score.get(pointer.other_side).reset!
-  #      increment(pointer.upper!)
-  #    end
-  #    if digit.get = 3 && @score.get(pointer.other_side).get = 3
-  #      digit.max = 5
-  #    end 
-  #  end
-  
-  def calculate
-    
+  def evaluate_set
+    normal = lambda do
+      if winner == 4
+        @mode = :normal
+        over
+      elsif left == 3 && right ==3
+        @mode = :deuce
+      end
+    end
+    deuce = lambda do
+      if winner == 5
+        @mode = :normal
+        over
+      elsif left == 4 && right ==4
+        deuce_again
+      end
+    end
+    tie_breake = lambda do
+      if winner == 7
+        @mode = :normal
+        over
+      elsif left == 6 && right == 6
+        @mode = :tie_breake_deuce
+      end
+    end
+    tie_breake_deuce = lambda do
+      if winner - loser == 2
+        @mode = :normal
+        over
+      end
+    end
+    @evaluate = {
+      :normal => normal,
+      :deuce => deuce, 
+      :tie_breake => tie_breake, 
+      :tie_breake_deuce => tie_breake_deuce}
   end
   
+  def display_set
+    normal = lambda do
+      num = ["0", "15", "30", "40"]
+      num[left] + "-" + num[right]
+    end
+    deuce = lambda do
+      if left == 3 && right == 3
+        "Deuce"
+      elsif left ==4
+        "A- "
+      else
+        " -A"
+      end
+    end
+    tie_breake = lambda do
+      left.to_s + "-" + right.to_s
+    end
+    tie_breake_deuce = lambda do
+      left.to_s + "-" + right.to_s
+    end
+    @display = {
+      :normal => normal,
+      :deuce => deuce, 
+      :tie_breake => tie_breake, 
+      :tie_breake_deuce => tie_breake_deuce}
+  end
 end
 
-if $0 ==__FILE__
-  #Score.increment(:right, "0-0, 3-2, 15-30")
-  main = Main.new
-  p main.add_score(:left)
-  #  100.times do
-  #    score.get_point(0)
-  #    p score
-  #    score.get_point(1)
-  #    p score
-  #    score.get_point(0)
-  #    p score
-  #    score.get_point(1)
-  #    p score
-  #    score.get_point(1)
-  #    p score
-  #  end
+
+class Game < Element
+  
+  def initialize(point)
+    super()
+    evaluate_set
+    display_set
+    @mode = :normal
+    @super = Sets.new
+    @point = point
+  end
+  
+  private
+  
+  def evaluate_set
+    normal = lambda do
+      if winner == 6
+        over
+      elsif left == 5 && right == 5
+        @mode = :five_all
+      end
+    end
+    five_all = lambda do
+      if winner == 7
+        @mode = :normal
+        over
+      elsif left == 6 && right ==6
+        @point.mode = :tie_breake
+      end
+    end   
+    @evaluate = {
+      :normal => normal,
+      :five_all => five_all}
+  end
+  
+  def display_set
+    normal = lambda do
+      left.to_s + "-" + right.to_s
+    end
+    five_all = lambda do
+      left.to_s + "-" + right.to_s
+    end   
+    @display = {
+      :normal => normal,
+      :five_all => five_all}
+  end
 end
 
 
+class Sets < Element #Setとするとdebuggerが何故か動かなくなるので、これだけ複数形
+  def initialize
+    super
+    @super = nil
+    dummy = lambda {}
+    @mode = :dummy
+    @evaluate = {:dummy => dummy}
+    @display = {:dummy => lambda{left.to_s + "-" + right.to_s}}
+  end
+end
 
 
-count(0,"6-6, -A")
+class Score  
+  def initialize
+    @score = Point.new
+  end
+  
+  def get_point(side)
+    @score.get_point side
+  end
+  
+  def display
+    @score.display
+  end
+  
+  def test_array
+    @score.test_display
+  end
+end
