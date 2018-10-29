@@ -1,5 +1,4 @@
-module Composite
-  
+module Composite 
   def <<(elm)
     @sub ||= []
     @sub << elm
@@ -8,6 +7,24 @@ module Composite
   def each
     yield(self)
     @sub.each{|elm| elm.each{|elm| yield(elm)}} if @sub
+  end
+end
+
+class OneToTow
+  def initialize(contena)
+    @tow_for_one = contena
+  end
+  
+  def <<(contena)
+    @tow_for_one << contena
+  end
+  
+  def [](key)
+    @tow_for_one[key]
+  end
+  
+  def other(key)
+    @tow_for_one.reject{|key1, value| key1 == key}.shift[1]
   end
 end
 
@@ -34,18 +51,19 @@ end
 
 
 class Element
-  
   include Composite
   
   def initialize
     @left = Digit.new
     @right = Digit.new
+    @player = OneToTow.new({:left => :@left, :right => :@right})
     @default_display = lambda{left.to_s + "-" + right.to_s}
   end
   
   def get_point(side)
     @side = side
-    winner_set
+    @winner = @player[side]
+    @loser = @player.other(side)
     increment
     evaluate
   end
@@ -69,31 +87,20 @@ class Element
   end
   
   def winner
-    @winner.digit
+    instance_variable_get(@winner).digit
   end
   
   def loser
-    @loser.digit
+    instance_variable_get(@loser).digit
   end
   
   def reset
     @left.reset!
     @right.reset!
   end
-  
-  def winner_set
-    case @side
-      when :left
-      @winner = @left
-      @loser = @right
-      when :right
-      @winner = @right
-      @loser = @left
-    end
-  end
-  
+    
   def increment
-    @winner.increment!
+    instance_variable_get(@winner).increment!
   end
   
   def over
@@ -183,12 +190,10 @@ class Point < Element
       :tie_breake => @default_display, 
       :tie_breake_deuce => @default_display}
   end
-  
 end
 
 
 class Game < Element
-  
   def initialize(point)
     super()
     evaluate_set
