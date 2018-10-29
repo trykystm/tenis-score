@@ -1,124 +1,254 @@
-Score=Struct.new(:set,:game,:point)
+#きっかけはpointの１点追加。
+#直後point中left、rightの状態を観察しmode変更とgameの１点追加。
+#同じくgame中のleft、rightの状態を観察しmode変更とsetの１点追加。
+#modeとは上のカテゴリに1点追加する条件、表示の仕方
 
-def count(winer,oncebefore)
-  
-  #����ݒ�
-  
-  server=Score.new
-  receiver=Score.new
-  case winer
-    when 0;loser=1
-    when 1;loser=0
-  end
-  score=[server,receiver]
-  
-  #���
-  
-  if oncebefore.split(/,/)[-3]
-    sets=oncebefore.split(/,/)[-3].split(/-/) 
-    server.set=sets[0].to_i;receiver.set=sets[1].to_i
+class Table
+  def initialize(*row)
+    @table = row #[[a, b, c], [d, e, f], [g, h, i]]
   end
   
-  if oncebefore.split(/,/)[-2]
-    if oncebefore.split(/,/)[-2]=~/6-6/
-      if ! (oncebefore.split(/,/)[-1]=~/Deuce/)
-        if ! (oncebefore.split(/,/)[-1].index("A"))
-          tiebreak=true
-        end
+  def << row
+    @table << row #<<[j, k, l] => [[a, b, c], [d, e, f], [g, h, i],[j, k, l]]
+  end
+  
+  def get(pointer)
+    current = pointer.current
+    @table[current[0]][current[1]]
+  end
+  
+  def inspect
+    p @table
+  end
+end  
+
+class Player
+  attr_accessor :winner, :loser
+  def initialize winner_player
+    @winner = winner_player
+    @loser = (@winner == :left) ? :right : :left
+  end
+  
+  def other
+    @loser
+  end
+  
+  def other_level!
+    
+  end
+  
+  def upper!
+    case @current_score
+      when :points
+      @current_score = :games
+      when :games
+      @current_score = :sets
+    end
+    
+  end
+  
+  def lower!
+    @pointer[0] += 1
+  end
+  
+  def left!
+    @pointer[1] -= 1
+  end
+  
+  def right!
+    @pointer[1] +=1
+  end 
+end
+
+class Digit
+  attr_accessor :digit
+  def initialize
+    reset! 
+  end
+  
+  def increment!
+    @digit += 1
+  end
+  
+  def reset!
+    @digit = 0
+  end
+  
+  def inspect
+    @digit
+  end
+end
+
+class Score
+  attr_accessor :left, :right, :mode, :over
+  def initialize mode
+    @left = Digit.new
+    @right = Digit.new
+    @mode = mode
+    @over = false
+  end
+  
+  def increment player
+    case player
+      when :left
+      @left.increment
+      when :right
+      @right.increment
+    end
+  end
+  
+  def evaluate player
+    @mode.evaluate player
+  end
+  
+  def over?
+    @over
+  end
+  
+  def display
+    @mode.display
+  end
+  
+  def mode_change mode
+    @mode = mode
+  end
+end
+
+class Point
+  NORMAL = Object.new
+  DEUCE = Object.new
+  class << NORMAL
+    def evaluate main
+      winner_point = main.points.send(main.player.winner)
+      if winner_point.digit == 4
+        winner_point.reset!
+        winner_point.reset!
+        winner_point.over = true
+      elsif winner_point.digit == 3 && @points.send(player.other).digit == 3
+        mode = Point::DEUCE
       end
     end
-    games=oncebefore.split(/,/)[-2].split(/-/)
-    server.game=games[0].to_i;receiver.game=games[1].to_i
-  end
-  
-  
-  points=oncebefore.split(/,/)[-1]
-  if points=~/Deuce/
-    server.point=3
-    receiver.point=3
-  else
-    server.point,receiver.point=points.split(/-/)
-    if tiebreak
-      server.point=server.point.to_i
-      receiver.point=receiver.point.to_i
-    elsif
-      server.point=trans(server.point)
-      receiver.point=trans(receiver.point)
-    end
-  end
-  
-  
-  #�v�Z
-  
-  score[winer].point+=1
-  
-  if tiebreak
-    if score[winer].point==7
-      score[winer].point=0
-      score[loser].point=0
-      score[winer].game=0
-      score[loser].game=0
-      score[winer].set+=1
-    end
-  elsif score[winer].point==4
-    unless score[loser].point==3
-      score[winer].point=0
-      score[loser].point=0
-      score[winer].game+=1
+    
+    def display
       
-      a=(score[winer].game==6 and (score[loser].game!=6 and score[loser].game!=5))
-      b=score[winer].game==7
-      if a or b
-        score[winer].game=0
-        score[loser].game=0
-        score[winer].set+=1
+    end
+  end  
+  
+  class << DEUCE
+    def evaluate
+      
+    end
+    
+    def display
+      
+    end    
+  end
+  #  
+  #  def Normal.display
+  #    
+  #  end
+  #  
+  #  Deuce = Object.new
+  #  def Deuce.evaluate
+  #    
+  #  end
+  #  
+  #  def Deuce.display
+  #    
+  #  end
+  #  
+  #  TieBrake = Object.new
+  #  def TieBrake.valuate
+  #    
+  #  end
+  #  
+  #  def TieBrake.display
+  #    
+  #  end
+  #
+  #  def initialize 
+  #    super Normal
+  #  end
+end
+
+class Game
+  NORMAL = lambda do
+    
+  end
+end
+
+class Main
+  attr_reader :sets, :games, :points, :player
+  def initialize
+    @sets = Score.new nil
+    @games = Score.new Game::NORMAL
+    @points = Score.new Point::NORMAL
+  end
+  
+  def add_score winner
+    @player = Player.new winner
+    increment_points @player
+    @points.evaluate self
+    if @points.over?
+      increment_games @player
+      @games.evaluate self
+      if @games.over?
+        increment_sets @player
       end
     end
+    display
   end
   
-  #�o��
-  
-  if tiebreak
-    if server.point==6 and receiver.point==6
-      pointstr="Deuce"
-    else
-      pointstr=server.point.to_s+"-"+receiver.point.to_s
-    end
-  elsif server.point==3 and receiver.point==3
-    pointstr="Deuce"
-  elsif score[winer].point==4 and score[loser].point==3
-    pointstr="A- " if winer==0
-    pointstr=" -A" if winer==1
-  else
-    pointstr=trans(server.point)+"-"+trans(receiver.point)
+  def inspect
+    p @points
   end
   
-  gamestr=server.game.to_s+"-"+receiver.game.to_s if server.game
-  setstr=server.set.to_s+"-"+receiver.set.to_s if server.set
+  def get
+    inspect
+  end
   
-  scorestr=pointstr
-  scorestr=gamestr+","+scorestr if gamestr
-  scorestr=setstr+","+scorestr if setstr
+  private
   
-  p scorestr
+  def increment_points player
+    @points.send(player.winner).increment!
+  end
+  
+  #  def increment(pointer)
+  #    digit = @score.get(pointer)
+  #    digit.increment!
+  #    if digit.max?
+  #      @score.get(pointer).reset!
+  #      @score.get(pointer.other_side).reset!
+  #      increment(pointer.upper!)
+  #    end
+  #    if digit.get = 3 && @score.get(pointer.other_side).get = 3
+  #      digit.max = 5
+  #    end 
+  #  end
+  
+  def calculate
+    
+  end
   
 end
 
-def trans (point)
-  case point
-    when "A";3
-    when " ";2
-    when "40";3
-    when "30";2
-    when "15";1
-    when "0";0
-    when 0;"0"
-    when 1;"15"
-    when 2;"30"
-    when 3;"40"
-  end
+if $0 ==__FILE__
+  #Score.increment(:right, "0-0, 3-2, 15-30")
+  main = Main.new
+  p main.add_score(:left)
+  #  100.times do
+  #    score.get_point(0)
+  #    p score
+  #    score.get_point(1)
+  #    p score
+  #    score.get_point(0)
+  #    p score
+  #    score.get_point(1)
+  #    p score
+  #    score.get_point(1)
+  #    p score
+  #  end
 end
-
 
 
 
