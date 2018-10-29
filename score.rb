@@ -1,3 +1,17 @@
+module Composite
+  
+  def <<(elm)
+    @sub ||= []
+    @sub << elm
+  end
+  
+  def each
+    yield(self)
+    @sub.each{|elm| elm.each{|elm| yield(elm)}} if @sub
+  end
+end
+
+
 class Digit
   attr_reader :digit
   
@@ -20,9 +34,13 @@ end
 
 
 class Element
+  
+  include Composite
+  
   def initialize
     @left = Digit.new
     @right = Digit.new
+    @default_display = lambda{left.to_s + "-" + right.to_s}
   end
   
   def get_point(side)
@@ -32,20 +50,13 @@ class Element
     evaluate
   end
   
-  def display
-    rtn = []
-    rtn << @display[@mode].call
-    rtn << @super.display if @super
-    rtn.flatten
-  end
-  
   def test_display
-    rtn = []
-    rtn << left
-    rtn << right 
-    @super.test_display.each{|aug|rtn << aug} if @super
-    rtn
-  end   
+    [left, right]
+  end  
+  
+  def display
+    @display[@mode].call
+  end
   
   private
   
@@ -86,7 +97,7 @@ class Element
   end
   
   def over
-    @super.get_point @side
+    @sub[0].get_point @side if @sub
     reset
   end
   
@@ -103,7 +114,7 @@ class Point < Element
     super()
     evaluate_set
     display_set
-    @super = Game.new self
+    self << Game.new(self)
     @mode = :normal
   end
   
@@ -166,18 +177,13 @@ class Point < Element
         " -A"
       end
     end
-    tie_breake = lambda do
-      left.to_s + "-" + right.to_s
-    end
-    tie_breake_deuce = lambda do
-      left.to_s + "-" + right.to_s
-    end
     @display = {
       :normal => normal,
       :deuce => deuce, 
-      :tie_breake => tie_breake, 
-      :tie_breake_deuce => tie_breake_deuce}
+      :tie_breake => @default_display, 
+      :tie_breake_deuce => @default_display}
   end
+  
 end
 
 
@@ -188,7 +194,7 @@ class Game < Element
     evaluate_set
     display_set
     @mode = :normal
-    @super = Sets.new
+    self << Sets.new
     @point = point
   end
   
@@ -216,15 +222,9 @@ class Game < Element
   end
   
   def display_set
-    normal = lambda do
-      left.to_s + "-" + right.to_s
-    end
-    five_all = lambda do
-      left.to_s + "-" + right.to_s
-    end   
     @display = {
-      :normal => normal,
-      :five_all => five_all}
+      :normal => @default_display,
+      :five_all => @default_display}
   end
 end
 
@@ -232,11 +232,10 @@ end
 class Sets < Element #Setとするとdebuggerが何故か動かなくなるので、これだけ複数形
   def initialize
     super
-    @super = nil
     dummy = lambda {}
     @mode = :dummy
     @evaluate = {:dummy => dummy}
-    @display = {:dummy => lambda{left.to_s + "-" + right.to_s}}
+    @display = {:dummy => @default_display}
   end
 end
 
@@ -251,10 +250,14 @@ class Score
   end
   
   def display
-    @score.display
+    rtn = []
+    @score.each{|elm| rtn << elm.display}
+    rtn
   end
   
   def test_array
-    @score.test_display
+    rtn = []
+    @score.each{|elm| rtn << elm.test_display}
+    rtn.flatten
   end
 end
