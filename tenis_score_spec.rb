@@ -4,7 +4,7 @@ RSpec.describe TenisScore do
     subject do
       tenis_score = TenisScore.new
       tenis_score.configuration(conf)
-      tenis_score.winA
+      tenis_score.win_LEFT
       tenis_score.list
     end
     context 'when sideA win' do
