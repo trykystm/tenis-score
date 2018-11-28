@@ -8,7 +8,7 @@ RSpec.describe TenisScore do
       tenis_score.list
     end
     context 'when sideA win' do
-      it {is_expected eq [[0, 0, 1], [0, 0, 0]]}
+      it {is_expected.to eq [[0, 0, 1], [0, 0, 0]]}
     end
   end
 end
