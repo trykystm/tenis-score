@@ -250,6 +250,18 @@ class TenisScore
     @score = Point.new
   end
   
+  def configration(conf)
+  end
+  
+  def win_LEFT
+  end
+  
+  def win_RIGHT
+  end
+  
+  def list
+  end
+  
   def get_point(side)
     @score.get_point side
   end
