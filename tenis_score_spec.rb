@@ -1,6 +1,6 @@
 require './tenis_score'
 RSpec.describe TenisScore do
-  desctibe '#list' do
+  xdesctibe '#list' do
     subject do
       tenis_score = TenisScore.new
       tenis_score.configuration(conf)
