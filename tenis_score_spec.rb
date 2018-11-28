@@ -7,7 +7,8 @@ RSpec.describe TenisScore do
       tenis_score.win_LEFT
       tenis_score.list
     end
-    context 'when sideA win' do
+    context 'when side_LEFT win' do
+      let(:conf){}
       it {is_expected.to eq [[0, 0, 1], [0, 0, 0]]}
     end
   end
