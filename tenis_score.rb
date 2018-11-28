@@ -245,7 +245,7 @@ class Sets < Element #Setとするとdebuggerが何故か動かなくなるの�
 end
 
 
-class Score  
+class TenisScore  
   def initialize
     @score = Point.new
   end
