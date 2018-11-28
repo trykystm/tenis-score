@@ -262,6 +262,9 @@ class TenisScore
   def list
   end
   
+  def status
+  end
+  
   def get_point(side)
     @score.get_point side
   end
