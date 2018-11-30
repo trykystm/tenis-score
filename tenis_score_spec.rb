@@ -15,4 +15,7 @@ RSpec.describe TenisScore do
   
   xdescribe '#status' do
   end
+  
+  xdescribe '#current_count' do
+  end
 end
