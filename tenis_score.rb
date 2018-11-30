@@ -1,7 +1,6 @@
 module Composite 
   def <<(elm)
-    @sub ||= []
-    @sub << elm
+    (@sub ||= []) << elm
   end
   
   def each
